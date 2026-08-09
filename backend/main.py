@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
+import threading
 
 from core.llm_engine import LLMEngine
 from core.rag_engine import RAGEngine
@@ -19,11 +20,22 @@ app.add_middleware(
 )
 
 print("[GhostFrame] Initializing engines...")
-llm = LLMEngine()
 rag = RAGEngine()
 validator = CodeValidator()
 persona = Persona("Vex")
-print(f"[GhostFrame] AI Model loaded: {llm.is_loaded()}")
+
+# Create an empty LLMEngine instance immediately (no download/load yet)
+llm = LLMEngine.__new__(LLMEngine)
+llm.llm = None
+
+def _init_llm():
+    """Runs the real download + model load in the background so the
+    server can start and pass healthchecks right away."""
+    print("[GhostFrame] Loading AI model in background...")
+    llm.__init__()
+    print(f"[GhostFrame] AI Model loaded: {llm.is_loaded()}")
+
+threading.Thread(target=_init_llm, daemon=True).start()
 
 class ChatRequest(BaseModel):
     message: str
