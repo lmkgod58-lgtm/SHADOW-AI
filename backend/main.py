@@ -70,11 +70,11 @@ def chat(req: ChatRequest):
         final_response = persona.fallback_response(user_msg, context)
         mode = "fallback"
 
+    sources_count = len(context.split("\n\n")) if context else 0
+
     return {
         "response": final_response,
         "mode": mode,
         "persona": persona.name,
-        "sources_count": len(context.split("
-
-")) if context else 0
+        "sources_count": sources_count
     }
