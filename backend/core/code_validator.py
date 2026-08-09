@@ -16,9 +16,7 @@ class CodeValidator:
         def replace_block(match):
             code = match.group(1)
             validated = self._validate_and_fix(code)
-            return f"```python
-{validated['code']}
-```"
+            return f"```python\n{validated['code']}\n```"
 
         return re.sub(pattern, replace_block, text, flags=re.DOTALL)
 
@@ -50,19 +48,15 @@ class CodeValidator:
             pass
 
         if errors:
-            comment = "
-# [GHOSTFRAME VALIDATOR]
-"
+            comment = "\n# [GHOSTFRAME VALIDATOR]\n"
             for err in errors:
-                comment += f"# ! {err}
-"
+                comment += f"# ! {err}\n"
             code = comment + code
 
         return {"code": code, "errors": errors, "valid": len(errors) == 0}
 
     def _fix_common_syntax(self, code: str, exc: SyntaxError) -> str:
-        lines = code.split("
-")
+        lines = code.split("\n")
         line_no = exc.lineno - 1
         if line_no < 0 or line_no >= len(lines):
             return code
@@ -72,7 +66,7 @@ class CodeValidator:
 
         control_kws = ["if ", "for ", "while ", "def ", "class ", "elif ", "else", "try", "except", "finally"]
         if any(stripped.startswith(kw) for kw in control_kws):
-            if not line.rstrip().endswith(":") and not line.rstrip().endswith("\"):
+            if not line.rstrip().endswith(":") and not line.rstrip().endswith('"'):
                 lines[line_no] = line.rstrip() + ":"
 
         if "EOF" in exc.msg or "unexpected EOF" in exc.msg:
@@ -90,5 +84,4 @@ class CodeValidator:
         if "unexpected indent" in exc.msg:
             lines[line_no] = line.lstrip()
 
-        return "
-".join(lines)
+        return "\n".join(lines)
