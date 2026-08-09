@@ -58,9 +58,7 @@ class RAGEngine:
             if key not in seen and len(s) > 20:
                 seen.add(key)
                 unique.append(s)
-        return "
-
-".join(unique[:6])
+        return "\n\n".join(unique[:6])
 
     def _extract_domain(self, text: str) -> str:
         pattern = r"(?:https?://)?([a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,})"
@@ -99,8 +97,7 @@ class RAGEngine:
                 return text[:2500]
             except ImportError:
                 soup = BeautifulSoup(html, "html.parser")
-                return soup.get_text(separator="
-", strip=True)[:2500]
+                return soup.get_text(separator="\n", strip=True)[:2500]
         except:
             return ""
 
@@ -111,13 +108,10 @@ class RAGEngine:
                 capture_output=True, text=True, timeout=10
             )
             out = result.stdout
-            lines = [l for l in out.split("
-") if any(k in l.lower() for k in [
+            lines = [l for l in out.split("\n") if any(k in l.lower() for k in [
                 "registrant", "name server", "creation", "expiration", "org", "country", "email"
             ])]
-            return f"[WHOIS {domain}]:
-" + "
-".join(lines[:15])
+            return f"[WHOIS {domain}]:\n" + "\n".join(lines[:15])
         except:
             return ""
 
@@ -129,8 +123,7 @@ class RAGEngine:
             )
             ips = result.stdout.strip()
             if ips:
-                return f"[DIG {domain}]:
-{ips}"
+                return f"[DIG {domain}]:\n{ips}"
             return ""
         except:
             return ""
@@ -139,14 +132,11 @@ class RAGEngine:
         try:
             url = "https://portswigger.net/web-security"
             text = self._lynx_dump(url) or self._curl_fetch(url)
-            lines = text.split("
-")
+            lines = text.split("\n")
             keywords = query.lower().split()
             relevant = [l for l in lines if any(k in l.lower() for k in keywords) and len(l) > 10]
             if relevant:
-                return [f"[PortSwigger Web Security]:
-" + "
-".join(relevant[:10])]
+                return [f"[PortSwigger Web Security]:\n" + "\n".join(relevant[:10])]
             return [f"[PortSwigger]: Visit https://portswigger.net/web-security for {query}"]
         except Exception as e:
             return [f"[PortSwigger]: Error — {e}"]
@@ -165,9 +155,7 @@ class RAGEngine:
                     summary = cells[1].text.strip()
                     items.append(f"{cve_id}: {summary}")
             if items:
-                return [f"[CVE.mitre.org]:
-" + "
-".join(items)]
+                return [f"[CVE.mitre.org]:\n" + "\n".join(items)]
             return [f"[CVE]: No direct results for '{query}'. Search: https://cve.mitre.org/"]
         except Exception as e:
             return [f"[CVE]: Error — {e}"]
@@ -176,14 +164,11 @@ class RAGEngine:
         try:
             url = "https://tryhackme.com/modules"
             text = self._lynx_dump(url) or self._curl_fetch(url)
-            lines = text.split("
-")
+            lines = text.split("\n")
             keywords = query.lower().split()
             relevant = [l.strip() for l in lines if any(k in l.lower() for k in keywords) and len(l.strip()) > 5]
             if relevant:
-                return [f"[TryHackMe]:
-" + "
-".join(relevant[:8])]
+                return [f"[TryHackMe]:\n" + "\n".join(relevant[:8])]
             return [f"[TryHackMe]: Search rooms at https://tryhackme.com/modules"]
         except Exception as e:
             return [f"[TryHackMe]: Error — {e}"]
@@ -192,14 +177,11 @@ class RAGEngine:
         try:
             url = "https://owasp.org/www-project-top-ten/"
             text = self._lynx_dump(url) or self._curl_fetch(url)
-            lines = text.split("
-")
+            lines = text.split("\n")
             keywords = query.lower().split()
             relevant = [l.strip() for l in lines if any(k in l.lower() for k in keywords) and len(l.strip()) > 10]
             if relevant:
-                return [f"[OWASP Top 10]:
-" + "
-".join(relevant[:10])]
+                return [f"[OWASP Top 10]:\n" + "\n".join(relevant[:10])]
             return [f"[OWASP]: Visit https://owasp.org/www-project-top-ten/"]
         except Exception as e:
             return [f"[OWASP]: Error — {e}"]
@@ -214,9 +196,7 @@ class RAGEngine:
             for a in soup.find_all("a", class_="v-align-middle")[:5]:
                 items.append(a.text.strip())
             if items:
-                return [f"[GitHub Repos]:
-" + "
-".join(items)]
+                return [f"[GitHub Repos]:\n" + "\n".join(items)]
             return [f"[GitHub]: Search https://github.com/search?q={q}"]
         except Exception as e:
             return [f"[GitHub]: Error — {e}"]
