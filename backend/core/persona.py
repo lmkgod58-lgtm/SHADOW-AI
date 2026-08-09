@@ -68,8 +68,7 @@ User: {user_message}
             "— Vex",
             "[FALLBACK_MODE_ACTIVE]"
         ])
-        return "
-".join(lines)
+        return "\n".join(lines)
 
     def _fallback_code_response(self, task: str, context: str) -> str:
         templates = {
@@ -129,8 +128,8 @@ else:
 url = input("Enter URL with parameter (e.g., http://site.com/search?q=): ")
 payloads = [
     "<script>alert('XSS')</script>",
-    ""><img src=x onerror=alert('XSS')>",
-    ""><svg onload=alert('XSS')>"
+    "\\"><img src=x onerror=alert('XSS')>",
+    "\\"><svg onload=alert('XSS')>"
 ]
 print("Testing for reflected XSS...")
 for payload in payloads:
@@ -169,9 +168,9 @@ try:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(3)
     s.connect((target, port))
-    s.send(b"HEAD / HTTP/1.1\r\nHost: target\r\n\r\n")
+    s.send(b"HEAD / HTTP/1.1\\r\\nHost: target\\r\\n\\r\\n")
     banner = s.recv(1024).decode(errors="ignore")
-    print(f"Banner received:\n{banner}")
+    print(f"Banner received:\\n{banner}")
     s.close()
 except Exception as e:
     print(f"Error: {e}")""",
@@ -185,9 +184,7 @@ except Exception as e:
                 break
 
         if not code:
-            code = f"# Task: {task}
-# No template found — write your implementation below
-"
+            code = f"# Task: {task}\n# No template found — write your implementation below\n"
 
         intros = [
             "[COMPILING GHOSTS FROM TEMPLATES]",
@@ -200,10 +197,3 @@ Task: {task}
 
 ```python
 {code}
-```
-
-[NOTE] This is a template response. Full AI generation requires more server RAM.
-       Code has been syntax-checked. Always test in a lab environment.
-
-— Vex
-[FALLBACK_MODE_ACTIVE]"""
