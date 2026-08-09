@@ -11,7 +11,7 @@ class LLMEngine:
         self.model_path = os.environ.get("MODEL_PATH", "/app/models/model.gguf")
         self.model_url = os.environ.get(
             "MODEL_URL",
-            "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q3_k_s.gguf"
+            "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q3_k_m.gguf"
         )
         self.llm = None
         self._ensure_model()
