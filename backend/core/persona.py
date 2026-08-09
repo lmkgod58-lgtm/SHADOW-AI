@@ -197,3 +197,10 @@ Task: {task}
 
 ```python
 {code}
+
+[NOTE] This is a template response. Full AI generation requires more server RAM.
+Code has been syntax-checked. Always test in a lab environment.
+— Vex
+
+[FALLBACK_MODE_ACTIVE]"""
+        
