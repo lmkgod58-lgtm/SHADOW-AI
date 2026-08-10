@@ -31,7 +31,7 @@ jobs:
       - name: Install buildozer + deps
         run: |
           pip install --upgrade pip
-          pip install buildozer cython kivy
+          pip install buildozer==1.5.0 python-for-android==2024.1.21 cython==0.29.33 kivy==2.3.0
 
       - name: Build APK
         working-directory: frontend
