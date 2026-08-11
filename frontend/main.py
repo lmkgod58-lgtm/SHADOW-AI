@@ -84,12 +84,9 @@ class GhostFrameChatApp(App):
 
         # Welcome message from Vex
         self._add_vex_msg(
-            "[NEURAL LINK ESTABLISHED]
-"
+            "[NEURAL LINK ESTABLISHED]\n"
             "I am Vex, your netrunner guide. I search the grid, compile intel, "
-            "and write clean code. The net is vast — what do you want to know?
-
-"
+            "and write clean code. The net is vast — what do you want to know?\n\n"
             "— Vex"
         )
 
@@ -152,8 +149,7 @@ class GhostFrameChatApp(App):
         mode = result.get("mode", "unknown")
 
         if mode == "fallback":
-            response = "[FALLBACK MODE — AI MODEL OFFLINE]
-" + response
+            response = "[FALLBACK MODE — AI MODEL OFFLINE]\n" + response
 
         self._add_vex_msg(response)
 
@@ -161,16 +157,11 @@ class GhostFrameChatApp(App):
         self.status.text = "[ LINK FAILURE ]"
         self.status.color = (1, 0.2, 0.2, 1)
         self._add_vex_msg(
-            f"[CONNECTION ERROR]
-{str(error)}
-
-"
-            "Diagnostics:
-"
-            "1. Check BACKEND_URL in main.py
-"
-            "2. Verify Railway backend is deployed
-"
+            f"[CONNECTION ERROR]\n"
+            f"{str(error)}\n\n"
+            "Diagnostics:\n"
+            "1. Check BACKEND_URL in main.py\n"
+            "2. Verify Railway backend is deployed\n"
             "3. Check internet connection"
         )
 
