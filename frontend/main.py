@@ -20,7 +20,7 @@ import json
 # SHADOW AI CONFIGURATION
 # ============================================================
 
-BACKEND_URL = "https://shadow-ai-production-aa93.up.railway.app"
+BACKEND_URL = "https://shadow-ai-production-aa93.up.railway.app/chat"
 
 # Put your background image here:
 # frontend/background.jpg
