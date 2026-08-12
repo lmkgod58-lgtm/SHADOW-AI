@@ -12,7 +12,7 @@ import json
 
 # ═══════════════════════════════════════════
 # CONFIG: Paste your Railway URL here
-BACKEND_URL = "sed -i 's|http://shadow-ai-production|https://shadow-ai-production|' frontend/main.py"
+BACKEND_URL = "https://shadow-ai-production-aa93.up.railway.app"
 # ═══════════════════════════════════════════
 
 class GhostFrameChatApp(App):
