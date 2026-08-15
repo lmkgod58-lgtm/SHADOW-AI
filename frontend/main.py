@@ -12,8 +12,9 @@ from kivy.uix.widget import Widget
 from kivy.uix.image import Image
 from kivy.uix.floatlayout import FloatLayout
 from kivy.network.urlrequest import UrlRequest
-from kivy.properties import NumericProperty
+
 import json
+import certifi
 
 
 # ============================================================
@@ -22,8 +23,9 @@ import json
 
 BACKEND_URL = "https://shadow-ai-production-aa93.up.railway.app"
 
-# Put your background image here:
-# frontend/background.jpg
+CHAT_ENDPOINT = BACKEND_URL.rstrip("/") + "/chat"
+HEALTH_ENDPOINT = BACKEND_URL.rstrip("/") + "/health"
+
 BACKGROUND_IMAGE = "background.jpg"
 
 
@@ -44,20 +46,22 @@ class MessageBubble(BoxLayout):
 
         self.is_user = is_user
 
-        # Maximum bubble width
         self.width = Window.width * (
             0.78 if is_user else 0.84
         )
 
         self.message = Label(
-            text=text,
+            text=str(text),
             color=(0.96, 0.98, 1, 1),
             font_size="15sp",
             markup=True,
             halign="left",
             valign="top",
             size_hint=(1, None),
-            text_size=(self.width - dp(30), None)
+            text_size=(
+                self.width - dp(30),
+                None
+            )
         )
 
         self.message.bind(
@@ -65,10 +69,6 @@ class MessageBubble(BoxLayout):
         )
 
         self.add_widget(self.message)
-
-        # ----------------------------------------------------
-        # Bubble background
-        # ----------------------------------------------------
 
         with self.canvas.before:
 
@@ -84,10 +84,6 @@ class MessageBubble(BoxLayout):
             self.rectangle = RoundedRectangle(
                 radius=[dp(20)]
             )
-
-        # ----------------------------------------------------
-        # Bubble border
-        # ----------------------------------------------------
 
         with self.canvas.after:
 
@@ -109,6 +105,11 @@ class MessageBubble(BoxLayout):
         self.bind(
             pos=self.update_graphics,
             size=self.update_graphics
+        )
+
+        Clock.schedule_once(
+            self.update_size,
+            0
         )
 
     def update_size(self, *_):
@@ -155,27 +156,15 @@ class MessageRow(BoxLayout):
             **kwargs
         )
 
-        self.add_widget(
-            Widget()
-        )
-
         if is_user:
 
-            self.add_widget(
-                bubble
-            )
+            self.add_widget(Widget())
+            self.add_widget(bubble)
 
         else:
 
-            self.clear_widgets()
-
-            self.add_widget(
-                bubble
-            )
-
-            self.add_widget(
-                Widget()
-            )
+            self.add_widget(bubble)
+            self.add_widget(Widget())
 
         self.bind(
             minimum_height=self.setter("height")
@@ -199,11 +188,12 @@ class ShadowAI(App):
             1
         )
 
-        # Conversation state
+        # Conversation
         self.history = []
 
-        # Network state
+        # Network
         self.busy = False
+        self.request = None
 
         # Royal mode
         self.royal_mode = False
@@ -215,7 +205,7 @@ class ShadowAI(App):
         root = FloatLayout()
 
         # ====================================================
-        # BACKGROUND IMAGE
+        # BACKGROUND
         # ====================================================
 
         self.background = Image(
@@ -230,7 +220,7 @@ class ShadowAI(App):
         )
 
         # ====================================================
-        # MAIN UI
+        # MAIN INTERFACE
         # ====================================================
 
         interface = BoxLayout(
@@ -313,7 +303,7 @@ class ShadowAI(App):
         )
 
         self.subtitle = Label(
-            text="ONLINE • READY TO THINK",
+            text="CONNECTING…",
             font_size="10sp",
             color=(
                 0.46,
@@ -337,7 +327,7 @@ class ShadowAI(App):
         )
 
         # ====================================================
-        # NEW CHAT BUTTON
+        # NEW CHAT
         # ====================================================
 
         new_chat = Button(
@@ -373,7 +363,7 @@ class ShadowAI(App):
         )
 
         # ====================================================
-        # CHAT SCROLL AREA
+        # CHAT
         # ====================================================
 
         self.scroll = ScrollView(
@@ -407,11 +397,11 @@ class ShadowAI(App):
         )
 
         # ====================================================
-        # STATUS BAR
+        # STATUS
         # ====================================================
 
         self.status = Label(
-            text="READY",
+            text="CONNECTING…",
             size_hint_y=None,
             height=dp(23),
             font_size="10sp",
@@ -428,7 +418,7 @@ class ShadowAI(App):
         )
 
         # ====================================================
-        # MESSAGE COMPOSER
+        # COMPOSER
         # ====================================================
 
         composer = BoxLayout(
@@ -523,7 +513,7 @@ class ShadowAI(App):
         )
 
         # ====================================================
-        # SEND BUTTON
+        # SEND
         # ====================================================
 
         self.send_button = Button(
@@ -564,7 +554,7 @@ class ShadowAI(App):
         )
 
         # ====================================================
-        # WELCOME MESSAGE
+        # WELCOME
         # ====================================================
 
         self.add_message(
@@ -576,18 +566,86 @@ class ShadowAI(App):
             "Hidden mode: type 666(LINDO)"
         )
 
-        # Automatically focus input
+        # Do NOT automatically open the keyboard.
+        # This was one of the UI problems we will fix properly
+        # in the huge visual update.
+
         Clock.schedule_once(
-            lambda dt:
-                setattr(
-                    self.input,
-                    "focus",
-                    True
-                ),
-            0.3
+            self.check_backend,
+            0.5
         )
 
         return root
+
+    # ========================================================
+    # BACKEND HEALTH CHECK
+    # ========================================================
+
+    def check_backend(self, *_):
+
+        self.status.text = "CHECKING BACKEND…"
+
+        try:
+
+            self.health_request = UrlRequest(
+                HEALTH_ENDPOINT,
+
+                on_success=self.on_health_success,
+
+                on_error=self.on_health_error,
+
+                on_failure=self.on_health_failure,
+
+                timeout=20,
+
+                verify=True,
+
+                ca_file=certifi.where()
+            )
+
+        except Exception as error:
+
+            self.on_network_exception(
+                "Health request could not start",
+                error
+            )
+
+    def on_health_success(
+        self,
+        request,
+        result
+    ):
+
+        self.status.text = "READY"
+
+        self.subtitle.text = (
+            "ONLINE • RAILWAY CONNECTED"
+        )
+
+    def on_health_error(
+        self,
+        request,
+        error
+    ):
+
+        # Health failure should NOT prevent chatting.
+        self.status.text = "READY • HEALTH CHECK FAILED"
+
+        self.subtitle.text = (
+            "BACKEND AVAILABLE • HEALTH UNKNOWN"
+        )
+
+    def on_health_failure(
+        self,
+        request,
+        status
+    ):
+
+        self.status.text = "READY • HEALTH CHECK FAILED"
+
+        self.subtitle.text = (
+            "BACKEND AVAILABLE • HEALTH UNKNOWN"
+        )
 
     # ========================================================
     # ADD MESSAGE
@@ -619,7 +677,7 @@ class ShadowAI(App):
         )
 
     # ========================================================
-    # SCROLL TO BOTTOM
+    # SCROLL
     # ========================================================
 
     def scroll_to_bottom(self, *_):
@@ -632,8 +690,10 @@ class ShadowAI(App):
 
     def new_chat(self, *_):
 
-        self.history = []
+        if self.busy:
+            return
 
+        self.history = []
         self.royal_mode = False
 
         self.chat.clear_widgets()
@@ -646,12 +706,10 @@ class ShadowAI(App):
         self.status.text = "READY"
 
         self.subtitle.text = (
-            "ONLINE • READY TO THINK"
+            "ONLINE • RAILWAY CONNECTED"
         )
 
         self.input.text = ""
-
-        self.input.focus = True
 
     # ========================================================
     # SEND MESSAGE
@@ -668,7 +726,7 @@ class ShadowAI(App):
             return
 
         # ----------------------------------------------------
-        # Detect LINDO mode locally
+        # LINDO MODE
         # ----------------------------------------------------
 
         if "666(LINDO)" in text.upper():
@@ -687,35 +745,21 @@ class ShadowAI(App):
 
             text = text.strip()
 
-            # If user only typed the activation code
             if not text:
 
-                text = (
-                    "Activate royal mode."
-                )
+                text = "Activate royal mode."
 
         # ----------------------------------------------------
-        # Display user's message
+        # USER MESSAGE
         # ----------------------------------------------------
 
-        display_text = text
-
-        if self.royal_mode:
-
-            self.add_message(
-                display_text,
-                is_user=True
-            )
-
-        else:
-
-            self.add_message(
-                display_text,
-                is_user=True
-            )
+        self.add_message(
+            text,
+            is_user=True
+        )
 
         # ----------------------------------------------------
-        # Add to conversation history
+        # HISTORY
         # ----------------------------------------------------
 
         self.history.append(
@@ -725,42 +769,43 @@ class ShadowAI(App):
             }
         )
 
-        # Keep history reasonable
-        self.history = self.history[-20:]
+        # ----------------------------------------------------
+        # IMPORTANT:
+        # Only send previous history here.
+        # The current user message is already represented
+        # by "message".
+        # ----------------------------------------------------
 
-        # Clear input
+        previous_history = self.history[:-1]
+
+        previous_history = previous_history[-19:]
+
+        # ----------------------------------------------------
+        # CLEAR INPUT
+        # ----------------------------------------------------
+
         self.input.text = ""
-
-        # ----------------------------------------------------
-        # Network state
-        # ----------------------------------------------------
 
         self.busy = True
 
+        self.send_button.disabled = True
+
         self.status.text = (
-            "THINKING • RESEARCHING WHEN NEEDED…"
+            "THINKING • RAILWAY…"
         )
 
-        if self.royal_mode:
-
-            self.subtitle.text = (
-                "ROYAL MODE • LINDO"
-            )
-
-        else:
-
-            self.subtitle.text = (
-                "PROCESSING • RAILWAY ACTIVE"
-            )
+        self.subtitle.text = (
+            "PROCESSING • SECURE HTTPS"
+        )
 
         # ----------------------------------------------------
-        # Backend request
+        # REQUEST
         # ----------------------------------------------------
 
         request_body = {
             "message": text,
 
-            "history": self.history[-20:],
+            "history": previous_history,
 
             "deep_search": True,
 
@@ -768,35 +813,46 @@ class ShadowAI(App):
         }
 
         body = json.dumps(
-            request_body
+            request_body,
+            ensure_ascii=False
         )
 
         headers = {
-            "Content-Type":
-                "application/json",
-
-            "Accept":
-                "application/json"
+            "Content-Type": "application/json",
+            "Accept": "application/json"
         }
 
-        UrlRequest(
-            BACKEND_URL + "/chat",
+        try:
 
-            req_body=body,
+            self.request = UrlRequest(
+                CHAT_ENDPOINT,
 
-            req_headers=headers,
+                req_body=body,
 
-            on_success=self.on_success,
+                req_headers=headers,
 
-            on_error=self.on_error,
+                on_success=self.on_success,
 
-            on_failure=self.on_error,
+                on_error=self.on_error,
 
-            timeout=120
-        )
+                on_failure=self.on_failure,
+
+                timeout=120,
+
+                verify=True,
+
+                ca_file=certifi.where()
+            )
+
+        except Exception as error:
+
+            self.on_network_exception(
+                "Could not create HTTPS request",
+                error
+            )
 
     # ========================================================
-    # BACKEND SUCCESS
+    # SUCCESS
     # ========================================================
 
     def on_success(
@@ -807,26 +863,23 @@ class ShadowAI(App):
 
         self.busy = False
 
-        # ----------------------------------------------------
-        # Validate response
-        # ----------------------------------------------------
+        self.send_button.disabled = False
 
         if not isinstance(result, dict):
 
             answer = (
-                "The backend returned an invalid response."
+                "The Railway backend returned an invalid "
+                "JSON response."
             )
 
         else:
 
             answer = result.get(
                 "response",
-                "The backend returned an empty response."
+                "The backend returned no response."
             )
 
-        # ----------------------------------------------------
-        # Store assistant message
-        # ----------------------------------------------------
+        answer = str(answer)
 
         self.history.append(
             {
@@ -837,10 +890,6 @@ class ShadowAI(App):
 
         self.history = self.history[-20:]
 
-        # ----------------------------------------------------
-        # Backend may confirm royal mode
-        # ----------------------------------------------------
-
         if isinstance(result, dict):
 
             self.royal_mode = bool(
@@ -849,21 +898,6 @@ class ShadowAI(App):
                     self.royal_mode
                 )
             )
-
-        # ----------------------------------------------------
-        # Display answer
-        # ----------------------------------------------------
-
-        self.add_message(
-            answer,
-            is_user=False
-        )
-
-        # ----------------------------------------------------
-        # Status
-        # ----------------------------------------------------
-
-        if isinstance(result, dict):
 
             mode = result.get(
                 "mode",
@@ -880,6 +914,11 @@ class ShadowAI(App):
             mode = "AI"
             sources = 0
 
+        self.add_message(
+            answer,
+            is_user=False
+        )
+
         self.status.text = (
             f"READY • {str(mode).upper()} • "
             f"{sources} SOURCE BLOCKS"
@@ -894,13 +933,11 @@ class ShadowAI(App):
         else:
 
             self.subtitle.text = (
-                "ONLINE • READY TO THINK"
+                "ONLINE • RAILWAY CONNECTED"
             )
 
-        self.input.focus = True
-
     # ========================================================
-    # BACKEND ERROR
+    # HTTP / NETWORK ERROR
     # ========================================================
 
     def on_error(
@@ -911,21 +948,108 @@ class ShadowAI(App):
 
         self.busy = False
 
+        self.send_button.disabled = False
+
+        error_text = str(error)
+
+        self.status.text = "REQUEST FAILED"
+
+        self.subtitle.text = "HTTPS / BACKEND ERROR"
+
+        self.add_message(
+            "⚠️ Shadow AI could not complete the request.\n\n"
+            f"Network error:\n{error_text}\n\n"
+            "The app has Internet permission. "
+            "This message shows the actual error instead "
+            "of incorrectly claiming that Railway is offline."
+        )
+
+        print(
+            "[SHADOW AI NETWORK ERROR]",
+            repr(error)
+        )
+
+    # ========================================================
+    # HTTP FAILURE
+    # ========================================================
+
+    def on_failure(
+        self,
+        request,
+        status
+    ):
+
+        self.busy = False
+
+        self.send_button.disabled = False
+
+        response = ""
+
+        try:
+
+            response = str(
+                getattr(
+                    request,
+                    "resp_status",
+                    ""
+                )
+            )
+
+        except Exception:
+            pass
+
         self.status.text = (
-            "CONNECTION ERROR"
+            f"HTTP ERROR {status}"
         )
 
         self.subtitle.text = (
-            "BACKEND UNREACHABLE"
+            "RAILWAY RESPONDED WITH AN ERROR"
         )
 
         self.add_message(
-            "I couldn't reach the Railway backend.\n\n"
-            "Check the backend URL, Railway deployment, "
-            "internet connection, and /chat endpoint."
+            "⚠️ The Railway server was reached, "
+            "but it returned an HTTP error.\n\n"
+            f"HTTP status: {status}\n"
+            f"Response status: {response}\n\n"
+            "This is different from the backend being "
+            "unreachable."
         )
 
-        self.input.focus = True
+        print(
+            "[SHADOW AI HTTP FAILURE]",
+            status,
+            response
+        )
+
+    # ========================================================
+    # REQUEST CREATION FAILURE
+    # ========================================================
+
+    def on_network_exception(
+        self,
+        title,
+        error
+    ):
+
+        self.busy = False
+
+        self.send_button.disabled = False
+
+        self.status.text = "NETWORK ERROR"
+
+        self.subtitle.text = (
+            "REQUEST COULD NOT START"
+        )
+
+        self.add_message(
+            f"⚠️ {title}\n\n"
+            f"{type(error).__name__}: {error}"
+        )
+
+        print(
+            "[SHADOW AI EXCEPTION]",
+            repr(error)
+        )
 
     # ========================================================
     # ANDROID PAUSE
