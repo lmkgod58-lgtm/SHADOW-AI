@@ -1,19 +1,30 @@
 [app]
-title = GhostFrame Chat
-package.name = ghostframe
-package.domain = org.ghostframe
+
+title = Shadow AI
+package.name = shadowai
+package.domain = org.shadowai
+
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas,ttf
-version = 2.0
-requirements = python3,kivy
+source.include_exts = py,png,jpg,jpeg,kv,atlas,ttf,otf,mp4,webm,json
+
+version = 3.0
+
+requirements = python3,kivy,requests,certifi,openssl
+
 orientation = portrait
 fullscreen = 0
+
 android.api = 33
 android.minapi = 21
 android.ndk = 28c
+
 android.archs = arm64-v8a
+
+android.permissions = INTERNET,ACCESS_NETWORK_STATE
+
 android.allow_backup = True
 
 [buildozer]
+
 log_level = 2
 warn_on_root = 1
